@@ -14,6 +14,7 @@
 // limitations under the License.
 //===----------------------------------------------------------------------===//
 
+import Containerization
 import Foundation
 import Testing
 
@@ -91,4 +92,27 @@ struct ContainerConfigurationCreationDateTests {
         let decoded = try JSONDecoder().decode(ContainerConfiguration.self, from: stripped)
         #expect(decoded.creationDate == Date(timeIntervalSince1970: 0))
     }
+}
+
+@Test
+func incompleteWritableBundleCanBeRetried() throws {
+    let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: dir) }
+    let source = dir.appendingPathComponent("source")
+    try Data([1]).write(to: source)
+    let path = dir.appendingPathComponent("bundle")
+    let fs = Filesystem.block(format: "ext4", source: source.path, destination: "/", options: [])
+    let kernel = Kernel(path: source, platform: .linuxArm)
+    var config = makeTestConfiguration()
+    config.resources.storage = 1
+    #expect(throws: Error.self) {
+        _ = try ContainerResource.Bundle.create(path: path, initialFilesystem: fs, kernel: kernel,
+            containerConfiguration: config, containerRootFilesystem: fs)
+    }
+    #expect(!FileManager.default.fileExists(atPath: path.appendingPathComponent("config.json").path))
+    config.resources.storage = nil
+    let bundle = try ContainerResource.Bundle.create(path: path, initialFilesystem: fs, kernel: kernel,
+        containerConfiguration: config, containerRootFilesystem: fs)
+    #expect(try bundle.configuration.id == config.id)
 }

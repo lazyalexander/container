@@ -89,6 +89,23 @@ extension Bundle {
         options: ContainerCreateOptions? = nil
     ) throws -> Bundle {
         try FileManager.default.createDirectory(at: path, withIntermediateDirectories: true)
+        // The directory also contains runtime-owned inputs. Roll back only the
+        // generated files for this attempt, leaving those inputs available for retry.
+        let generated = [Self.kernelBinaryFilename, Self.kernelFilename, Self.initfsFilename,
+                         Self.containerRootFsBlockFilename, Self.containerRootFsFilename,
+                         "writable.ext4", "options.json", Self.containerConfigFilename]
+            .map { path.appendingPathComponent($0) }
+        guard !generated.contains(where: { FileManager.default.fileExists(atPath: $0.path) }) else {
+            throw CocoaError(.fileWriteFileExists)
+        }
+        var complete = false
+        defer {
+            if !complete {
+                for file in generated {
+                    try? FileManager.default.removeItem(at: file)
+                }
+            }
+        }
         let kbin = path.appendingPathComponent(Self.kernelBinaryFilename)
         try FileManager.default.copyItem(at: kernel.path, to: kbin)
         var k = kernel
@@ -108,9 +125,6 @@ extension Bundle {
             fatalError("invalid filesystem type for initial filesystem")
         }
         let bundle = Bundle(path: path)
-        if let containerConfiguration {
-            try bundle.write(filename: Self.containerConfigFilename, value: containerConfiguration)
-        }
 
         if let capacity = containerConfiguration?.resources.storage {
             guard capacity >= 256 * 1024 * 1024, capacity <= 64 * 1024 * 1024 * 1024,
@@ -137,6 +151,10 @@ extension Bundle {
         if let options {
             try bundle.write(filename: "options.json", value: options)
         }
+        if let containerConfiguration {
+            try bundle.write(filename: Self.containerConfigFilename, value: containerConfiguration)
+        }
+        complete = true
         return bundle
     }
 }
@@ -177,7 +195,7 @@ extension Bundle {
 
     private static func write(_ path: URL, value: Encodable) throws {
         let data = try JSONEncoder().encode(value)
-        try data.write(to: path)
+        try data.write(to: path, options: .atomic)
     }
 
     public func load<T>(filename: String) throws -> T where T: Decodable {
