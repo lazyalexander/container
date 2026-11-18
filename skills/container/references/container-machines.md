@@ -103,8 +103,7 @@ in the project's `docs/container-machine.md`.
 
 ## Nested virtualization
 
-Requires Apple silicon M3 or later, macOS 15 or later, and a kernel built with `CONFIG_KVM=y`
-— the default kernel does not have it.
+Use an Apple silicon M3 or later host running a [supported macOS version](../../../README.md) and a guest kernel built with `CONFIG_KVM=y`. The default guest kernel lacks KVM support.
 
 ```bash
 container machine create --virtualization --kernel /path/to/vmlinux-kvm --name kvm-dev alpine:latest

@@ -87,7 +87,7 @@ Memory defaults to half of host memory. The home-mount can be `rw` (default), `r
 
 A container machine supports nested virtualization. The requirements for this to work are:
 
-1. Apple Silicon **M3 or later** with **macOS 15 or later**.
+1. An Apple silicon **M3 or later** host running a [supported macOS version](../README.md). The underlying virtualization API requires macOS 15 or later.
 2. A Linux kernel with CONFIG_KVM=y enabled. The default kernel does not support this.
 
 ```bash
