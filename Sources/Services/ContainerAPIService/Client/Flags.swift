@@ -99,6 +99,9 @@ public struct Flags {
     }
 
     public struct Resource: ParsableArguments {
+        @Option(help: "Maximum writable layer size in bytes")
+        public var writableLayerBytes: UInt64?
+
         public init() {}
 
         public init(cpus: Int64?, memory: String?) {

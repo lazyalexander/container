@@ -167,6 +167,8 @@ public struct Utility {
             defaultMemory: containerSystemConfig.container.memory
         )
 
+        config.resources.storage = resource.writableLayerBytes
+
         let tmpfs = try Parser.tmpfsMounts(management.tmpFs)
         let volumesOrFs = try Parser.volumes(management.volumes)
         let mountsOrFs = try Parser.mounts(management.mounts)

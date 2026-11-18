@@ -922,6 +922,9 @@ public actor ContainersService {
         self.log.debug("\(#function)")
 
         let state = try self._getContainerState(id: id)
+        guard state.snapshot.configuration.resources.storage == nil else {
+            throw ContainerizationError(.unsupported, message: "export of a separate writable layer is unavailable")
+        }
         let path = self.containerRoot.appendingPathComponent(id)
         let bundle = ContainerResource.Bundle(path: path)
         let rootfs = bundle.containerRootfsBlock

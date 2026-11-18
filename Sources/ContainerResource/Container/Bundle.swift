@@ -15,6 +15,8 @@
 //===----------------------------------------------------------------------===//
 
 import Containerization
+import ContainerizationEXT4
+import SystemPackage
 import ContainerizationError
 import Foundation
 
@@ -110,10 +112,25 @@ extension Bundle {
             try bundle.write(filename: Self.containerConfigFilename, value: containerConfiguration)
         }
 
+        if let capacity = containerConfiguration?.resources.storage {
+            guard capacity >= 256 * 1024 * 1024, capacity <= 64 * 1024 * 1024 * 1024,
+                capacity.isMultiple(of: 4096), options?.rootFsOverride == nil,
+                containerConfiguration?.readOnly != true, containerRootFilesystem != nil
+            else {
+                throw ContainerizationError(.invalidArgument, message: "invalid writable layer capacity or root configuration")
+            }
+            let path = bundle.filePath(for: "writable.ext4")
+            let formatter = try EXT4.Formatter(FilePath(path.path), minDiskSize: capacity)
+            try formatter.close()
+            let bytes = try path.resourceValues(forKeys: [.fileSizeKey]).fileSize
+            guard bytes == Int(capacity) else {
+                throw ContainerizationError(.invalidArgument, message: "writable layer size differs from request")
+            }
+        }
         if let rootFsOverride = options?.rootFsOverride {
             try bundle.setContainerRootFs(fs: rootFsOverride)
         } else if let containerRootFilesystem {
-            let readonly = containerConfiguration?.readOnly ?? false
+            let readonly = (containerConfiguration?.readOnly ?? false) || containerConfiguration?.resources.storage != nil
             try bundle.cloneContainerRootFs(cloning: containerRootFilesystem, readonly: readonly)
         }
 

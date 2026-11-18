@@ -56,6 +56,15 @@ extension Application {
             help: "Specify whether the default kernel should be installed or not (default: prompt user)")
         var kernelInstall: Bool?
 
+        @Flag(help: "Start control services only; never download a kernel or initial filesystem")
+        var offline = false
+
+        public func validate() throws {
+            if offline && kernelInstall == true {
+                throw ValidationError("--offline conflicts with --enable-kernel-install")
+            }
+        }
+
         @Option(
             help: "Number of seconds to wait for API service to become responsive",
             transform: {
@@ -148,6 +157,14 @@ extension Application {
                     .internalError,
                     message: "failed to get a response from machine API server: \(error)"
                 )
+            }
+
+            // Offline bootstrap deliberately leaves dependency installation to explicit
+            // local image/kernel operations after the control services are available.
+            // No image lookup or download helper may run across this boundary.
+            if offline {
+                log.info("Control services ready; offline boot dependencies must be installed explicitly")
+                return
             }
 
             if await !initImageExists(containerSystemConfig: containerSystemConfig) {

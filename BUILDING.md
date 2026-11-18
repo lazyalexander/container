@@ -63,6 +63,8 @@ make test
 ./bin/container system start --app-root .test-data
 ```
 
+For offline control-service startup, run `container system start --offline` with your selected roots. Supply the kernel and initial filesystem from local assets before starting a guest. Combining `--offline` with `--enable-kernel-install` fails argument validation.
+
 ### Integration test options
 
 | Variable | Default | Effect |

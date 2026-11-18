@@ -270,7 +270,18 @@ public actor RuntimeService {
                 cpus: config.resources.cpus + config.resources.cpuOverhead,
                 memoryInBytes: config.resources.memoryInBytes + VMResources.guestMemoryOverhead
             )
-            let container = try LinuxContainer(id, rootfs: rootfs, vmm: vmm, vm: vmResources, logger: self.log) { czConfig in
+            let writableLayer: Containerization.Mount? = try config.resources.storage.map { capacity in
+                let path = bundle.filePath(for: "writable.ext4")
+                let values = try path.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey])
+                guard values.isRegularFile == true, values.isSymbolicLink != true,
+                    let bytes = values.fileSize, UInt64(bytes) == capacity,
+                    rootfs.options.contains("ro")
+                else {
+                    throw ContainerizationError(.invalidArgument, message: "writable layer identity or capacity changed")
+                }
+                return .block(format: "ext4", source: path.path, destination: "/", options: [])
+            }
+            let container = try LinuxContainer(id, rootfs: rootfs, writableLayer: writableLayer, vmm: vmm, vm: vmResources, logger: self.log) { czConfig in
                 try Self.configureContainer(czConfig: &czConfig, config: config, dynamicEnv: dynamicEnv, log: self.log)
                 czConfig.interfaces = interfaces
                 czConfig.process.stdout = stdout
