@@ -57,23 +57,3 @@ With the initial release of `container`, you get basic facilities for building a
 The macOS Virtualization framework implements only partial support for memory ballooning, which is a technology that allows virtual machines to dynamically use and relinquish host memory. When you create a container, the underlying virtual machine only uses the amount of memory that the containerized application needs. For example, you might start a container using the option `--memory 16g`, but see that the application is only using 2 GiBytes of RAM in the macOS Activity Monitor.
 
 Currently, memory pages freed to the Linux operating system by processes running in the container's VM are not relinquished to the host. If you run many memory-intensive containers, you may need to occasionally restart them to reduce memory utilization.
-
-### macOS 15 limitations
-
-`container` takes advantage of new operating system features that are available in macOS 26 and later. You can run `container` on macOS 15, but we don't recommend that configuration, and you may run into some limitations in functionality and user experiences. Our development efforts focus on the latest release of macOS, and we have no plans to fix issues found with macOS 15 that cannot be reproduced on macOS 26 or later.
-
-Running `container` on macOS 15 has these known limitations:
-
-#### Network isolation
-
-The vmnet framework in macOS 15 can only provide networks where the attached containers are isolated from one another. Container-to-container communication over the virtual network is not possible.
-
-#### Multiple networks
-
-In macOS 15, all containers attach to the default vmnet network. The `container network` commands are not available on macOS 15, and using the `--network` option for `container run` or `container create` will result in an error.
-
-#### Container IP addresses
-
-In macOS 15, limitations in the vmnet framework mean that the container network can only be created when the first container starts. Since the network XPC helper provides IP addresses to containers, and the helper has to start before the first container, it is possible for the network helper and vmnet to disagree on the subnet address, resulting in containers that are completely cut off from the network.
-
-Normally, vmnet creates the container network using the CIDR address 192.168.64.1/24, and on macOS 15, `container` defaults to using this CIDR address in the network helper.
